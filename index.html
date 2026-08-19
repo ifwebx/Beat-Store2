@@ -2143,7 +2143,7 @@
     </div>
     <div id="cart-items-container" class="space-y-3 sm:space-y-4 mb-4 sm:mb-6"></div>
     <div class="border-t-2 pt-4">
-    <div class="flex justify-between items-center mb-4 sm:mb-6"><span class="text-lg sm:text-xl font-bold">Total:</span> <span class="text-xl sm:text-2xl font-bold price-badge" id="cart-total">$0.00</span>
+    <div class="flex justify-between items-center mb-4 sm:mb-6"><span class="text-lg sm:text-xl font-bold">Total:</span> <span class="text-xl sm:text-2xl font-bold price-badge" id="cart-total">₦0.00</span>
     </div><button id="checkout-action-button" onclick="proceedToCheckout()" class="block w-full btn-primary text-white py-3 sm:py-4 rounded-xl font-semibold text-center shadow-md text-sm sm:text-base"> <i class="fas fa-credit-card mr-2"></i>Proceed to Checkout <span id="checkout-discount-badge" class="hidden ml-2 inline-flex items-center rounded-full bg-yellow-100 text-yellow-700 px-2 py-1 text-[10px] font-semibold">Sign in to activate discount</span></button>
     <button id="guest-checkout-button" onclick="proceedToCheckout(false)" class="hidden w-full mt-3 border-2 border-gray-200 bg-white text-gray-700 py-3 sm:py-4 rounded-xl font-semibold text-center hover:bg-gray-50 transition text-sm sm:text-base">or continue to payment</button>
     </div>
@@ -2160,7 +2160,7 @@
             logo_image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=40&h=40&fit=crop",
             frontend_url: (typeof window !== 'undefined' && window.location) ? (window.location.origin + window.location.pathname) : '',
             flutterwave_public_key: "FLWPUBK-f544f28c7b81089d8dd88da4bd6eff46-X",
-            google_apps_script_url: "https://script.google.com/macros/s/AKfycbxib1PbjMk_wi2s-9ZkxaQ2s0G4imWDBpsGsrZuHClYfeYkgPlEf62P_4UBfP4mR9vS/exec",
+            google_apps_script_url: "https://script.google.com/macros/s/AKfycbxag1jkQg3uc1p1BiyzD_FJ9jVszKBlLiH8h-WenfxWTO00tRrc5E4M4ZX-kUlBW9Ar/exec",
             admin_email: "debeatjay@gmail.com"
         };
 
@@ -2642,7 +2642,7 @@
                 bpm: 97,
                 genre: "Reggaeton, Wizkid Type Beat",
                 key: "E minor",
-                price: { mp3: 20.99, wav: 40.99, premium: 97.99, unlimited: 195.99 },
+                price: { mp3: 1.00, wav: 40.99, premium: 97.99, unlimited: 195.99 },
                 image: "photo/1.jpg",
                 audioUrl: "New folder/Falling_E minor_97bpm_tagged.mp3",
                 downloadLinks: {
@@ -3748,10 +3748,12 @@
         // Ensure first user gesture unlocks AudioContext on mobile
         unlockAudioOnFirstGesture();
 
-        function formatNaira(amount) {
-            return '$' + Number(amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        function formatUsd(amount) {
+            return '$' + Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
-
+        function formatNaira(amount) {
+            return formatUsd(amount);
+        }
         function resolveTrackDuration(beatId) {
             if (Number.isFinite(trackDurationOverrides[beatId])) {
                 return trackDurationOverrides[beatId];
@@ -5179,7 +5181,7 @@
             
             if (cart.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center py-8 text-sm sm:text-base">Your cart is empty</p>';
-                document.getElementById('cart-total').textContent = '$0.00';
+                document.getElementById('cart-total').textContent = '₦0.00';
                 const guestCheckoutButton = document.getElementById('guest-checkout-button');
                 if (guestCheckoutButton) guestCheckoutButton.classList.add('hidden');
                 return;
@@ -6059,8 +6061,9 @@
             const name = document.getElementById('customer-name').value;
             const summary = getBulkDealSummary(cart);
             const firstTimeDiscount = checkoutUsesDiscount ? getFirstTimeDiscountForCart(cart) : 0;
-            const total = Math.max(0, summary.total - firstTimeDiscount);
-            
+            const totalUsd = Math.max(0, summary.total - firstTimeDiscount);
+            const totalUsdDisplay = Number(totalUsd.toFixed(2));
+            const total = totalUsdDisplay;
             const orderButton = document.getElementById('order-button');
             orderButton.disabled = true;
             orderButton.disabled = false;
@@ -6089,7 +6092,7 @@
                     public_key: publicKey,
                     tx_ref: `DBSTORE-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
                     amount: Number(total.toFixed(2)),
-                    currency: 'NGN',
+                    currency: 'USD',
                     payment_options: 'card,banktransfer,ussd',
                     customer: { email, name },
                     customizations: {
@@ -6097,7 +6100,12 @@
                         description: 'Beat license purchase',
                         logo: config.logo_image || defaultConfig.logo_image
                     },
-                    meta: { orderItems: JSON.stringify(orderDetails) },
+                    meta: {
+                        orderItems: JSON.stringify(orderDetails),
+                        amountUsd: String(totalUsdDisplay),
+                        currencyUsd: 'USD',
+                        amountLocal: String(totalUsdDisplay)
+                    },
                     callback: async function(payment) {
                         orderButton.disabled = true;
                         orderButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Confirming payment...';
@@ -6113,10 +6121,12 @@
                                     paymentReference: payment.tx_ref || '',
                                     transactionId: payment.transaction_id || '',
                                     amount: total,
-                                    currency: 'NGN',
+                                    currency: 'USD',
+                                    amount_usd: String(totalUsdDisplay),
+                                    currency_usd: 'USD',
                                     status: payment.status || '',
                                     orderItems: JSON.stringify(orderDetails),
-                                    orderSummary: JSON.stringify({ items: orderDetails, total }),
+                                    orderSummary: JSON.stringify({ items: orderDetails, total: totalUsdDisplay }),
                                     downloadLinks: JSON.stringify(orderDetails),
                                     rawResponse: JSON.stringify(payment),
                                     timestamp: new Date().toISOString()

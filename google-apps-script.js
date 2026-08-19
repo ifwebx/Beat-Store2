@@ -29,6 +29,10 @@ function doGet(e) {
     return getOfferLookup(params);
   }
 
+  if ((type === 'exchange_rate' || type === 'fetch_exchange_rate') && params.from && params.to) {
+    return getExchangeRateResponse(params);
+  }
+
   return HtmlService.createHtmlOutput('Beat Store Apps Script is running.');
 }
 
@@ -44,7 +48,7 @@ function normalizeFrontendUrl(value) {
 }
 
 function getOfferLookup(params) {
-  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
+  const spreadsheetId = '1gYUv1XePQAmS-hZotxO5VN8g1ei_66L-ztKDjgCNh-k';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -137,6 +141,40 @@ function renderOfferHtml(title, message, extraHtml) {
   );
 }
 
+function getFlutterwaveExchangeRate(fromCurrency, toCurrency) {
+  const secretKey = PropertiesService.getScriptProperties().getProperty('FLUTTERWAVE_SECRET_KEY');
+  if (!secretKey) {
+    throw new Error('Flutterwave secret key is not configured in Apps Script properties.');
+  }
+
+  const from = (fromCurrency || 'USD').toString().trim().toUpperCase();
+  const to = (toCurrency || 'NGN').toString().trim().toUpperCase();
+  const response = UrlFetchApp.fetch('https://api.flutterwave.com/v3/rates?from=' + encodeURIComponent(from) + '&to=' + encodeURIComponent(to), {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + secretKey },
+    muteHttpExceptions: true
+  });
+
+  const body = JSON.parse(response.getContentText() || '{}');
+  const rate = Number((body && body.data && body.data.rate) || 0);
+  if (!rate || rate <= 0) {
+    throw new Error('Unable to fetch live Flutterwave exchange rate.');
+  }
+
+  return rate;
+}
+
+function getExchangeRateResponse(params) {
+  try {
+    const from = (params.from || 'USD').toString().trim().toUpperCase();
+    const to = (params.to || 'NGN').toString().trim().toUpperCase();
+    const rate = getFlutterwaveExchangeRate(from, to);
+    return createCorsJsonOutput({ ok: true, from, to, rate });
+  } catch (error) {
+    return createCorsJsonOutput({ ok: false, message: error && error.message ? error.message : 'Exchange rate unavailable', from: (params.from || 'USD').toString().trim().toUpperCase(), to: (params.to || 'NGN').toString().trim().toUpperCase() });
+  }
+}
+
 function verifyFlutterwavePayment(transactionId, expectedAmount, expectedCurrency) {
   const secretKey = PropertiesService.getScriptProperties().getProperty('FLUTTERWAVE_SECRET_KEY');
   if (!secretKey) {
@@ -166,7 +204,7 @@ function verifyFlutterwavePayment(transactionId, expectedAmount, expectedCurrenc
 }
 
 function handleOfferAction(params) {
-  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
+  const spreadsheetId = '1gYUv1XePQAmS-hZotxO5VN8g1ei_66L-ztKDjgCNh-k';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -266,7 +304,7 @@ function handleOfferAction(params) {
 }
 
 function redirectOfferCartFromToken(token) {
-  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
+  const spreadsheetId = '1gYUv1XePQAmS-hZotxO5VN8g1ei_66L-ztKDjgCNh-k';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -293,7 +331,7 @@ function redirectOfferCartFromToken(token) {
 }
 
 function renderPayLinkPage(token) {
-  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
+  const spreadsheetId = '1gYUv1XePQAmS-hZotxO5VN8g1ei_66L-ztKDjgCNh-k';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -323,7 +361,7 @@ function renderPayLinkPage(token) {
 }
 
 function renderPayLinkPage_v2(token) {
-  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
+  const spreadsheetId = '1gYUv1XePQAmS-hZotxO5VN8g1ei_66L-ztKDjgCNh-k';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -951,7 +989,7 @@ function doPost(e) {
   try {
     Logger.log('doPost called with parameter object: %s', JSON.stringify(e && e.parameter ? e.parameter : {}));
     Logger.log('doPost raw body: %s', e && e.postData ? e.postData.contents : '(none)');
-    const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
+    const spreadsheetId = '1gYUv1XePQAmS-hZotxO5VN8g1ei_66L-ztKDjgCNh-k';
     const ss = SpreadsheetApp.openById(spreadsheetId);
     let params = e.parameter || {};
     if ((!params || Object.keys(params).length === 0) && e.postData && e.postData.contents) {
