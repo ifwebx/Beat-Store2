@@ -6012,6 +6012,9 @@
                             </div>
                         </div>
                         
+                        <input type="hidden" id="checkout-currency" value="AUTO">
+                        <p id="detected-country" class="text-xs text-gray-500 mt-2">Detecting country...</p>
+
                         <button type="submit" id="order-button" class="w-full btn-primary text-white py-3 sm:py-4 rounded-xl font-semibold shadow-md text-sm sm:text-base">
                             <i class="fas fa-credit-card mr-2"></i>Pay with Flutterwave
                         </button>
@@ -6020,6 +6023,7 @@
             `;
             
             document.body.appendChild(checkoutModal);
+            detectCountry();
             
             const checkoutItems = document.getElementById('checkout-items');
             const itemsHtml = cart.map(item => `
@@ -6054,20 +6058,107 @@
             }
         }
 
+        let detectedCountry = null;
+
+        async function detectCountry() {
+            try {
+                const el = document.getElementById('detected-country');
+                if (el) el.textContent = 'Detecting country...';
+
+                // Attempt server-side detection via Google Apps Script backend
+                const config = window.elementSdk ? window.elementSdk.config : defaultConfig;
+                const scriptUrl = (config && config.google_apps_script_url) || defaultConfig.google_apps_script_url;
+                let code = '';
+
+                if (scriptUrl) {
+                    const url = scriptUrl.includes('?') ? `${scriptUrl}&type=detect_country` : `${scriptUrl}?type=detect_country`;
+                    try {
+                        const r = await fetch(url, { method: 'GET', cache: 'no-store' });
+                        if (r.ok) {
+                            const json = await r.json().catch(() => ({}));
+                            if (json && json.country_code) code = String(json.country_code).toUpperCase();
+                        }
+                    } catch (err) {
+                        console.warn('Server-side country detect failed', err);
+                    }
+                }
+
+                detectedCountry = code || null;
+                if (el) {
+                    if (detectedCountry) el.textContent = `Detected country: ${detectedCountry}`;
+                    else el.textContent = 'Country detection unavailable';
+                }
+
+                // No visible toggles: store chosen currency into hidden input. Respect any pre-set non-AUTO value.
+                const currencyEl = document.getElementById('checkout-currency');
+                const currentVal = currencyEl ? currencyEl.value : 'AUTO';
+                const usingAuto = !currentVal || currentVal === 'AUTO';
+
+                if (usingAuto) {
+                    if (detectedCountry === 'NG') {
+                        if (currencyEl) currencyEl.value = 'NGN';
+                    } else {
+                        if (currencyEl) currencyEl.value = 'USD';
+                    }
+                }
+            } catch (e) {
+                detectedCountry = null;
+                const el = document.getElementById('detected-country');
+                if (el) el.textContent = 'Country detection failed';
+            }
+        }
+
+        async function fetchExchangeRateFromBackend(from = 'USD', to = 'NGN') {
+            try {
+                const config = window.elementSdk ? window.elementSdk.config : defaultConfig;
+                const scriptUrl = (config && config.google_apps_script_url) || defaultConfig.google_apps_script_url;
+                if (scriptUrl) {
+                    const rateUrl = scriptUrl.includes('?') ? `${scriptUrl}&type=fetch_exchange_rate&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : `${scriptUrl}?type=fetch_exchange_rate&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+                    const r = await fetch(rateUrl, { method: 'GET', cache: 'no-store' });
+                    if (r.ok) {
+                        const json = await r.json().catch(() => ({}));
+                        if (json && json.ok && json.rate) return Number(json.rate);
+                        if (json && json.rate) return Number(json.rate);
+                    }
+                }
+            } catch (e) {
+                console.warn('Backend exchange fetch failed', e);
+            }
+            return null;
+        }
+
         async function startFlutterwavePayment(event) {
             event.preventDefault();
-            
+
             const email = document.getElementById('customer-email').value;
             const name = document.getElementById('customer-name').value;
             const summary = getBulkDealSummary(cart);
             const firstTimeDiscount = checkoutUsesDiscount ? getFirstTimeDiscountForCart(cart) : 0;
             const totalUsd = Math.max(0, summary.total - firstTimeDiscount);
             const totalUsdDisplay = Number(totalUsd.toFixed(2));
-            const total = totalUsdDisplay;
+
+            const currencyInput = document.querySelector('input[name="checkout-currency"]:checked');
+            let selected = currencyInput ? currencyInput.value : 'AUTO';
+            if (selected === 'AUTO') selected = (detectedCountry === 'NG') ? 'NGN' : 'USD';
+
+            let amountToSend = totalUsdDisplay;
+            let sendCurrency = 'USD';
+            let rateUsed = null;
+
+            if (selected === 'NGN') {
+                // attempt to get live rate from backend (which calls Flutterwave rates endpoint)
+                rateUsed = await fetchExchangeRateFromBackend('USD', 'NGN');
+                if (!rateUsed) {
+                    // fallback to a safe default
+                    rateUsed = 1450;
+                }
+                amountToSend = Number((totalUsdDisplay * rateUsed).toFixed(2));
+                sendCurrency = 'NGN';
+            }
+
             const orderButton = document.getElementById('order-button');
             orderButton.disabled = true;
-            orderButton.disabled = false;
-            orderButton.innerHTML = '<i class="fas fa-credit-card mr-2"></i>Pay with Flutterwave';
+            orderButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
 
             const orderDetails = cart.map(item => ({
                 beat: item.beatTitle,
@@ -6091,9 +6182,9 @@
                 FlutterwaveCheckout({
                     public_key: publicKey,
                     tx_ref: `DBSTORE-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
-                    amount: Number(total.toFixed(2)),
-                    currency: 'USD',
-                    payment_options: 'card,banktransfer,ussd',
+                    amount: Number(amountToSend.toFixed(2)),
+                    currency: sendCurrency,
+                    payment_options: sendCurrency === 'NGN' ? 'card,banktransfer,ussd' : 'card',
                     customer: { email, name },
                     customizations: {
                         title: 'De Beat Chef',
@@ -6104,7 +6195,9 @@
                         orderItems: JSON.stringify(orderDetails),
                         amountUsd: String(totalUsdDisplay),
                         currencyUsd: 'USD',
-                        amountLocal: String(totalUsdDisplay)
+                        amountLocal: String(amountToSend),
+                        currencyLocal: sendCurrency,
+                        exchangeRate: rateUsed ? String(rateUsed) : ''
                     },
                     callback: async function(payment) {
                         orderButton.disabled = true;
@@ -6120,13 +6213,14 @@
                                     email,
                                     paymentReference: payment.tx_ref || '',
                                     transactionId: payment.transaction_id || '',
-                                    amount: total,
-                                    currency: 'USD',
+                                    amount: amountToSend,
+                                    currency: sendCurrency,
                                     amount_usd: String(totalUsdDisplay),
                                     currency_usd: 'USD',
+                                    exchange_rate: rateUsed ? String(rateUsed) : '',
                                     status: payment.status || '',
                                     orderItems: JSON.stringify(orderDetails),
-                                    orderSummary: JSON.stringify({ items: orderDetails, total: totalUsdDisplay }),
+                                    orderSummary: JSON.stringify({ items: orderDetails, total: totalUsdDisplay, totalLocal: amountToSend, currencyLocal: sendCurrency }),
                                     downloadLinks: JSON.stringify(orderDetails),
                                     rawResponse: JSON.stringify(payment),
                                     timestamp: new Date().toISOString()
@@ -6211,5 +6305,5 @@
         renderAccountView();
         renderBeats('beats-container', beats, 'list');
     </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b00703d63b5ed2b',t:'MTc2NjA3OTU1NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
