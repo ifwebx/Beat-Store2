@@ -2159,8 +2159,8 @@
             hero_image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&h=400&fit=crop",
             logo_image: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=40&h=40&fit=crop",
             frontend_url: (typeof window !== 'undefined' && window.location) ? (window.location.origin + window.location.pathname) : '',
-            flutterwave_public_key: "FLWPUBK-f544f28c7b81089d8dd88da4bd6eff46-X",
-            google_apps_script_url: "https://script.google.com/macros/s/AKfycbyt94dn7goLnqWhNjXwLSJtopZXZ9N2p6SnrkAOw3NnlGEUpGaKV-2zXMt0c1mGqJhHrQ/exec",
+            flutterwave_public_key: "37fb2d74-bb61-49c3-9cac-2ad628bc4555",
+            google_apps_script_url: "https://script.google.com/macros/s/AKfycby9DFLLqZD7RaS7WBBfUb2VCJDa-IEjSgx94AF3sVULXBSS60AJs8-13HFlygy_6SZM_Q/exec",
             admin_email: "debeatjay@gmail.com"
         };
 
@@ -6089,7 +6089,7 @@
                     public_key: publicKey,
                     tx_ref: `DBSTORE-${Date.now()}-${Math.floor(Math.random() * 100000)}`,
                     amount: Number(total.toFixed(2)),
-                    currency: 'USD',
+                    currency: 'NGN',
                     payment_options: 'card,banktransfer,ussd',
                     customer: { email, name },
                     customizations: {
@@ -6113,7 +6113,7 @@
                                     paymentReference: payment.tx_ref || '',
                                     transactionId: payment.transaction_id || '',
                                     amount: total,
-                                    currency: 'USD',
+                                    currency: 'NGN',
                                     status: payment.status || '',
                                     orderItems: JSON.stringify(orderDetails),
                                     orderSummary: JSON.stringify({ items: orderDetails, total }),
