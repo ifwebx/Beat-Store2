@@ -44,7 +44,7 @@ function normalizeFrontendUrl(value) {
 }
 
 function getOfferLookup(params) {
-  const spreadsheetId = '1HLNXs5ONj5B8NHAt5IxJTAitEj_6q0klAxmm4Vb7ybQ';
+  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -166,7 +166,7 @@ function verifyFlutterwavePayment(transactionId, expectedAmount, expectedCurrenc
 }
 
 function handleOfferAction(params) {
-  const spreadsheetId = '1HLNXs5ONj5B8NHAt5IxJTAitEj_6q0klAxmm4Vb7ybQ';
+  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -266,7 +266,7 @@ function handleOfferAction(params) {
 }
 
 function redirectOfferCartFromToken(token) {
-  const spreadsheetId = '1HLNXs5ONj5B8NHAt5IxJTAitEj_6q0klAxmm4Vb7ybQ';
+  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -293,7 +293,7 @@ function redirectOfferCartFromToken(token) {
 }
 
 function renderPayLinkPage(token) {
-  const spreadsheetId = '1HLNXs5ONj5B8NHAt5IxJTAitEj_6q0klAxmm4Vb7ybQ';
+  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -323,7 +323,7 @@ function renderPayLinkPage(token) {
 }
 
 function renderPayLinkPage_v2(token) {
-  const spreadsheetId = '1HLNXs5ONj5B8NHAt5IxJTAitEj_6q0klAxmm4Vb7ybQ';
+  const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
   const ss = SpreadsheetApp.openById(spreadsheetId);
   const offersSheet = getOrCreateSheet(ss, 'Offers');
   ensureHeaders(offersSheet, ['timestamp', 'type', 'name', 'email', 'beatTitle', 'beatGenre', 'beatBpm', 'beatKey', 'offerPrice', 'offerMessage', 'itemId', 'customerEmail', 'adminEmail', 'scriptUrl', 'frontendUrl', 'actionToken', 'status', 'actionTaken', 'actionTimestamp', 'payLinkToken', 'payLinkUrl']);
@@ -951,7 +951,7 @@ function doPost(e) {
   try {
     Logger.log('doPost called with parameter object: %s', JSON.stringify(e && e.parameter ? e.parameter : {}));
     Logger.log('doPost raw body: %s', e && e.postData ? e.postData.contents : '(none)');
-    const spreadsheetId = '1HLNXs5ONj5B8NHAt5IxJTAitEj_6q0klAxmm4Vb7ybQ';
+    const spreadsheetId = '10CzFZabv29Id_mg4kdHHDDT_QbAfZpxAPWsFdo-JohU';
     const ss = SpreadsheetApp.openById(spreadsheetId);
     let params = e.parameter || {};
     if ((!params || Object.keys(params).length === 0) && e.postData && e.postData.contents) {
